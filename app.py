@@ -19,6 +19,42 @@ st.set_page_config(
     layout="wide"
 )
 
+# Accessibility improvements for elderly users
+st.markdown("""
+<style>
+    /* Larger, readable text */
+    html, body, [class*="st-"] {
+        font-size: 18px;
+    }
+
+    /* Larger buttons and touch targets */
+    .stButton > button,
+    .stFormSubmitButton > button {
+        min-height: 48px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    /* Clear form labels */
+    label {
+        font-size: 17px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Improve readability */
+    .stMarkdown p {
+        line-height: 1.65;
+    }
+
+    /* Visible keyboard focus indicator */
+    button:focus-visible,
+    input:focus-visible {
+        outline: 3px solid #2563eb !important;
+        outline-offset: 3px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Temporary medication storage for this browser session
 
 
