@@ -1,5 +1,7 @@
 
 import streamlit as st
+from firestore_service import load_appointments, save_appointment
+
 
 st.set_page_config(
     page_title="CARELOOP AI",
@@ -11,8 +13,14 @@ st.set_page_config(
 if "medications" not in st.session_state:
     st.session_state.medications = []
 
+
 if "appointments" not in st.session_state:
-    st.session_state.appointments = []
+    try:
+        st.session_state.appointments = load_appointments()
+    except Exception as error:
+        st.session_state.appointments = []
+        st.error(f"Could not load demo appointments: {error}")
+
 
 # Shared medication data for all dashboards
 medications = st.session_state.medications
@@ -310,21 +318,42 @@ elif page == "Appointment Manager":
 
         submitted = st.form_submit_button("Add Appointment")
 
+        
         if submitted:
             if doctor_name.strip() and location.strip():
-                st.session_state.appointments.append(
-                    {
-                        "doctor": doctor_name.strip(),
-                        "date": appointment_date,
-                        "time": appointment_time,
-                        "location": location.strip(),
-                    }
-                )
-                st.success("Appointment added successfully!")
+
+                new_appointment = {
+                    "doctor": doctor_name.strip(),
+                    "date": appointment_date,
+                    "time": appointment_time,
+                    "location": location.strip()
+                }
+
+                try:
+                    # Save the appointment to Firestore
+                    appointment_id = save_appointment(
+                        new_appointment
+                    )
+
+                    # Update the current dashboard data
+                    st.session_state.appointments = (
+                        load_appointments()
+                    )
+
+                    st.success(
+                        "Appointment saved permanently!"
+                    )
+
+                except Exception as error:
+                    st.error(
+                        f"Could not save appointment: {error}"
+                    )
+
             else:
                 st.warning(
                     "Please enter the doctor's name and hospital."
                 )
+
 
     st.divider()
     st.header("📋 Scheduled Appointments")

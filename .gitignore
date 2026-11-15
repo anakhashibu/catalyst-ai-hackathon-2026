@@ -218,3 +218,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# CARELOOP AI - Additional security rules
+.venv/
+.env.*
+!.env.example
+
+# Firebase / Google Cloud private credentials
+*service-account*.json
+*service_account*.json
+*firebase-adminsdk*.json
+application_default_credentials.json
+
+# macOS system files
+.DS_Store
