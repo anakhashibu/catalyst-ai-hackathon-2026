@@ -1,8 +1,7 @@
-
 import streamlit as st
 import os
+from care_priority import build_care_priorities
 
-DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 from firestore_service import (
     load_appointments,
     save_appointment,
@@ -10,6 +9,8 @@ from firestore_service import (
     save_medication,
     update_medication_status,
 )
+
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 
 
 
@@ -84,7 +85,7 @@ if "appointments" not in st.session_state:
 # Initialize Care Relay follow-up records
 if "care_relay" not in st.session_state:
     st.session_state.care_relay = {}
-    
+
 # Shared medication data for all dashboards
 medications = st.session_state.medications
 
@@ -288,7 +289,6 @@ elif page == "Family Dashboard":
                     st.write(
                         f"**Caregiver follow-up:** {outcome}"
                     )
-
                     if outcome == "Needs assistance":
                         st.warning(
                             "Caregiver recorded that assistance "
@@ -332,6 +332,47 @@ elif page == "Caregiver Dashboard":
     col2.metric("Unconfirmed Doses", len(pending_medications))
 
     st.divider()
+
+    st.subheader("🧠 Smart Care Priorities")
+
+    priorities = build_care_priorities(
+        medications,
+        st.session_state.care_relay
+    )
+
+    if not priorities:
+        st.success("No active follow-up priorities.")
+
+    else:
+        high_count = sum(
+            item["level"] == "HIGH"
+            for item in priorities
+        )
+
+        st.metric("Needs Assistance", high_count)
+
+        for item in priorities:
+            label = (
+                f"{item['name']} — "
+                f"{item['level']}"
+            )
+
+            if item["level"] == "HIGH":
+                st.error(f"🔴 {label}: {item['message']}")
+
+            elif item["level"] == "REVIEW":
+                st.warning(f"🟠 {label}: {item['message']}")
+
+            else:
+                st.info(f"🔵 {label}: {item['message']}")
+
+    st.caption(
+        "Priorities are generated using transparent "
+        "rules, not AI diagnosis or clinical risk prediction."
+    )
+
+    st.divider()
+
     st.header("🤝 Care Relay — Follow-up Queue")
 
     st.info(
@@ -442,12 +483,6 @@ elif page == "Medication Manager":
                     "Please enter the medication name and dosage."
                 )
 
-                st.session_state.next_med_id = (
-                    st.session_state.get("next_med_id", 1) + 1
-                )
-                st.success("Medication added successfully!")
-        else:
-            st.error("Please enter the medication name and dosage.")
 
     st.divider()
     st.header("📋 Medication Schedule")
