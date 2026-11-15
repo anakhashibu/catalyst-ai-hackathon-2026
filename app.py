@@ -1,6 +1,14 @@
 
 import streamlit as st
-from firestore_service import load_appointments, save_appointment
+
+from firestore_service import (
+    load_appointments,
+    save_appointment,
+    load_medications,
+    save_medication,
+    update_medication_status,
+)
+
 
 
 st.set_page_config(
@@ -10,8 +18,14 @@ st.set_page_config(
 )
 
 # Temporary medication storage for this browser session
+
 if "medications" not in st.session_state:
-    st.session_state.medications = []
+    try:
+        st.session_state.medications = load_medications()
+    except Exception as error:
+        st.session_state.medications = []
+        st.error(f"Could not load demo medications: {error}")
+
 
 
 if "appointments" not in st.session_state:
@@ -243,21 +257,40 @@ elif page == "Medication Manager":
 
         submitted = st.form_submit_button("Add Medication")
 
+        
         if submitted:
             if medicine_name.strip() and dosage.strip():
-                st.session_state.medications.append({
-                    "id": st.session_state.get("next_med_id", 1),
+
+                new_medication = {
                     "name": medicine_name.strip(),
                     "dosage": dosage.strip(),
-                    "time": medicine_time.strftime("%I:%M %p"),
+                    "time": medicine_time,
                     "status": "Unconfirmed"
-                })
+                }
+
+                try:
+                    # Save the medication to Firestore
+                    save_medication(new_medication)
+
+                    # Reload the saved medications
+                    st.session_state.medications = load_medications()
+
+                    st.success("Medication saved permanently!")
+
+                except Exception as error:
+                    st.error(f"Could not save medication: {error}")
+
+            else:
+                st.warning(
+                    "Please enter the medication name and dosage."
+                )
+
                 st.session_state.next_med_id = (
                     st.session_state.get("next_med_id", 1) + 1
                 )
                 st.success("Medication added successfully!")
-            else:
-                st.error("Please enter the medication name and dosage.")
+        else:
+            st.error("Please enter the medication name and dosage.")
 
     st.divider()
     st.header("📋 Medication Schedule")
@@ -272,29 +305,44 @@ elif page == "Medication Manager":
                 st.write(f"Time: {medication['time']}")
                 st.write(f"Status: **{medication['status']}**")
 
-                if medication["status"] == "Unconfirmed":
-                    col1, col2 = st.columns(2)
+                
+            if medication["status"] == "Unconfirmed":
+                col1, col2 = st.columns(2)
 
-                    with col1:
-                        if st.button(
-                            "✅ Mark as Taken",
-                            key=f"taken_{medication['id']}"
-                        ):
-                            medication["status"] = "Taken"
+                with col1:
+                    if st.button(
+                        "✅ Mark as Taken",
+                        key=f"taken_{medication['id']}"
+                    ):
+                        try:
+                            update_medication_status(
+                                medication["id"], "Taken"
+                            )
+                            st.session_state.medications = load_medications()
                             st.rerun()
+                        except Exception as error:
+                            st.error(f"Could not update medication: {error}")
 
-                    with col2:
-                        if st.button(
-                            "⏭️ Mark as Skipped",
-                            key=f"skipped_{medication['id']}"
-                        ):
-                            medication["status"] = "Skipped"
+                with col2:
+                    if st.button(
+                        "⏭️ Mark as Skipped",
+                        key=f"skipped_{medication['id']}"
+                    ):
+                        try:
+                            update_medication_status(
+                                medication["id"], "Skipped"
+                            )
+                            st.session_state.medications = load_medications()
                             st.rerun()
+                        except Exception as error:
+                            st.error(f"Could not update medication: {error}")
 
-                else:
-                    st.success(
-                        f"Dose recorded as {medication['status']}."
-                    )
+            
+            else:
+                st.success(
+                    f"Dose recorded as {medication['status']}."
+                )
+
 
     st.caption(
         "Demo only. Medication entries must follow "
