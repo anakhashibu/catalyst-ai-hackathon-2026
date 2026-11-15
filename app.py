@@ -112,8 +112,40 @@ elif page == "Elderly Dashboard":
             else:
                 st.warning(message)
 
-    st.header("📅 Upcoming Appointment")
-    st.write("Routine check-up — Demo appointment")
+    
+
+    st.subheader("📅 Upcoming Appointment")
+
+    from datetime import datetime
+
+    now = datetime.now()
+
+    upcoming_appointments = [
+        appointment
+        for appointment in st.session_state.appointments
+        if datetime.combine(
+            appointment["date"],
+            appointment["time"]
+        ) >= now
+    ]
+
+    if upcoming_appointments:
+        next_appointment = min(
+            upcoming_appointments,
+            key=lambda appointment: datetime.combine(
+                appointment["date"],
+                appointment["time"]
+            )
+        )
+
+        st.write(f"**Doctor:** {next_appointment['doctor']}")
+        st.write(f"**Date:** {next_appointment['date'].strftime('%d %B %Y')}")
+        st.write(f"**Time:** {next_appointment['time'].strftime('%I:%M %p')}")
+        st.write(f"**Location:** {next_appointment['location']}")
+    else:
+        st.info("No upcoming appointments scheduled.")
+
+
 
 
 
@@ -132,16 +164,16 @@ elif page == "Family Dashboard":
     st.header("🤝 Care Relay Updates")
 
     
-if unconfirmed_doses > 0:
-    st.warning(
+    if unconfirmed_doses > 0:
+        st.warning(
         f"{unconfirmed_doses} medication dose(s) "
         "awaiting confirmation."
     )
-else:
-    st.success("No unconfirmed doses in the current schedule.")
+    else:
+        st.success("No unconfirmed doses in the current schedule.")
 
-if skipped_doses > 0:
-    st.info(
+    if skipped_doses > 0:
+        st.info(
         f"{skipped_doses} dose(s) recorded as skipped."
     )
 
