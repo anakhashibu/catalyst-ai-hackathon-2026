@@ -81,6 +81,10 @@ if "appointments" not in st.session_state:
             st.session_state.appointments = []
             st.error(f"Could not load demo appointments: {error}")
 
+# Initialize Care Relay follow-up records
+if "care_relay" not in st.session_state:
+    st.session_state.care_relay = {}
+    
 # Shared medication data for all dashboards
 medications = st.session_state.medications
 
@@ -217,71 +221,177 @@ elif page == "Elderly Dashboard":
 
 
 
+
 # Family dashboard
 elif page == "Family Dashboard":
     st.title("👨‍👩‍👧 Family Dashboard")
     st.write("Stay connected with your loved one's care.")
 
-    col1, col2 = st.columns(2)
+    # Medication summary
+    col1, col2, col3 = st.columns(3)
 
     col1.metric("Taken Doses", taken_doses)
     col2.metric("Unconfirmed Doses", unconfirmed_doses)
+    col3.metric("Skipped Doses", skipped_doses)
 
     st.divider()
-    st.header("🤝 Care Relay Updates")
 
-    
+    # Medication updates
+    st.header("💊 Medication Updates")
+
     if unconfirmed_doses > 0:
         st.warning(
-        f"{unconfirmed_doses} medication dose(s) "
-        "awaiting confirmation."
-    )
+            f"{unconfirmed_doses} medication dose(s) "
+            "awaiting confirmation."
+        )
     else:
-        st.success("No unconfirmed doses in the current schedule.")
+        st.success(
+            "No unconfirmed doses in the current schedule."
+        )
 
     if skipped_doses > 0:
         st.info(
-        f"{skipped_doses} dose(s) recorded as skipped."
-    )
-
+            f"{skipped_doses} dose(s) recorded as skipped."
+        )
 
     st.info(
         "An unconfirmed dose does not necessarily "
         "mean the medication was missed."
     )
 
+    st.divider()
+
+    # Care Relay follow-up information
+    st.header("🤝 Care Relay Follow-ups")
+
+    if not st.session_state.care_relay:
+        st.info("No caregiver follow-ups recorded yet.")
+
+    else:
+        follow_up_count = 0
+
+        for med in medications:
+            med_id = str(med["id"])
+
+            if med_id in st.session_state.care_relay:
+                follow_up_count += 1
+
+                outcome = st.session_state.care_relay[med_id]
+
+                with st.container(border=True):
+                    st.subheader(med["name"])
+
+                    st.write(
+                        f"**Medication status:** {med['status']}"
+                    )
+
+                    st.write(
+                        f"**Caregiver follow-up:** {outcome}"
+                    )
+
+                    if outcome == "Needs assistance":
+                        st.warning(
+                            "Caregiver recorded that assistance "
+                            "may be required."
+                        )
+
+                    elif outcome == "Resolved":
+                        st.success(
+                            "Caregiver marked the follow-up as resolved."
+                        )
+
+                    elif outcome == "Contacted":
+                        st.info(
+                            "Caregiver recorded that contact was made."
+                        )
+
+        if follow_up_count == 0:
+            st.info(
+                "No follow-up records match the current medications."
+            )
+
+    st.caption(
+        "Care Relay is a manual demonstration workflow. "
+        "Follow-up outcomes do not confirm medication intake."
+    )
+
+
+
 # Caregiver dashboard
 elif page == "Caregiver Dashboard":
     st.title("🩺 Caregiver Dashboard")
     st.write("Coordinate care and follow-ups.")
 
-    col1, col2 = st.columns(2)
-
-    col1.metric("Demo Patients", 1)
-    col2.metric("Unconfirmed Doses", unconfirmed_doses)
-
-    st.divider()
-    st.header("📋 Follow-up Queue")
-
-    
     pending_medications = [
         med for med in medications
         if med["status"] == "Unconfirmed"
     ]
 
-    if pending_medications:
-        for med in pending_medications:
-            st.warning(
-                f"Awaiting confirmation: {med['name']} "
-                f"— {med['time']}"
-        )
-    else:
+    col1, col2 = st.columns(2)
+    col1.metric("Demo Patients", 1)
+    col2.metric("Unconfirmed Doses", len(pending_medications))
+
+    st.divider()
+    st.header("🤝 Care Relay — Follow-up Queue")
+
+    st.info(
+        "Care Relay allows caregivers to record follow-up "
+        "outcomes for medication doses awaiting confirmation. "
+        "This is a manual demonstration workflow."
+    )
+
+    if not pending_medications:
         st.success("No unconfirmed doses to review.")
 
+    for med in pending_medications:
+        med_id = str(med["id"])
+
+        with st.container(border=True):
+            st.subheader(med["name"])
+            st.write(f"Scheduled time: {med['time']}")
+            st.write(f"Dosage: {med['dosage']}")
+            st.warning("Medication confirmation pending")
+
+            existing_outcome = st.session_state.care_relay.get(
+                med_id, "Not contacted"
+            )
+
+            st.write(f"**Follow-up status:** {existing_outcome}")
+
+            with st.form(f"relay_form_{med_id}"):
+                outcome = st.selectbox(
+                    "Record caregiver follow-up",
+                    [
+                        "Not contacted",
+                        "Contacted",
+                        "Needs assistance",
+                        "Resolved"
+                    ],
+                    index=[
+                        "Not contacted",
+                        "Contacted",
+                        "Needs assistance",
+                        "Resolved"
+                    ].index(existing_outcome),
+                    key=f"relay_outcome_{med_id}"
+                )
+
+                submitted = st.form_submit_button(
+                    "Save follow-up outcome"
+                )
+
+                if submitted:
+                    st.session_state.care_relay[med_id] = outcome
+                    st.success("Follow-up outcome recorded.")
+                    st.rerun()
+
     st.caption(
-        "Unconfirmed doses are shown for review. "
-        "Care Relay escalation is not active yet."
-)
+        "An unconfirmed dose is not necessarily missed. "
+        "Care Relay does not confirm medication intake "
+        "or send automatic notifications in this prototype."
+    )
+
+
 
 
 
