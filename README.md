@@ -49,6 +49,25 @@ CARELOOP AI explores a coordinated workflow designed to improve visibility while
   - Resolved
 - Display recorded follow-ups on the Family Dashboard
 
+
+### 6. Smart Care Priority Engine
+
+CARELOOP AI includes an explainable, rule-based
+care prioritization engine.
+
+The engine:
+- Highlights caregiver follow-ups marked Needs assistance
+- Identifies skipped medication doses for review
+- Tracks doses awaiting confirmation
+- Excludes completed and resolved items from active priorities
+- Displays explanations for each priority level
+
+The engine supports non-clinical care coordination.
+It does not use a trained AI model, diagnose conditions,
+or provide medical recommendations.
+
+Six automated tests verify its prioritization logic.
+
 Care Relay is currently a manual coordination workflow. It does not automatically contact caregivers or send notifications.
 
 ## Technology Stack
