@@ -1,6 +1,8 @@
 
 import streamlit as st
+import os
 
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 from firestore_service import (
     load_appointments,
     save_appointment,
@@ -19,22 +21,29 @@ st.set_page_config(
 
 # Temporary medication storage for this browser session
 
+
+# Initialize medications
 if "medications" not in st.session_state:
-    try:
-        st.session_state.medications = load_medications()
-    except Exception as error:
+    if DEMO_MODE:
         st.session_state.medications = []
-        st.error(f"Could not load demo medications: {error}")
+    else:
+        try:
+            st.session_state.medications = load_medications()
+        except Exception as error:
+            st.session_state.medications = []
+            st.error(f"Could not load demo medications: {error}")
 
 
-
+# Initialize appointments
 if "appointments" not in st.session_state:
-    try:
-        st.session_state.appointments = load_appointments()
-    except Exception as error:
+    if DEMO_MODE:
         st.session_state.appointments = []
-        st.error(f"Could not load demo appointments: {error}")
-
+    else:
+        try:
+            st.session_state.appointments = load_appointments()
+        except Exception as error:
+            st.session_state.appointments = []
+            st.error(f"Could not load demo appointments: {error}")
 
 # Shared medication data for all dashboards
 medications = st.session_state.medications
@@ -268,18 +277,20 @@ elif page == "Medication Manager":
                     "status": "Unconfirmed"
                 }
 
+                
                 try:
-                    # Save the medication to Firestore
-                    save_medication(new_medication)
-
-                    # Reload the saved medications
-                    st.session_state.medications = load_medications()
-
-                    st.success("Medication saved permanently!")
+                    if DEMO_MODE:
+                        new_medication["id"] = f"demo_{len(st.session_state.medications) + 1}"
+                        st.session_state.medications.append(new_medication)
+                        st.success("Medication added to your demo schedule!")
+                    else:
+                        save_medication(new_medication)
+                        st.session_state.medications = load_medications()
+                        st.success("Medication saved permanently!")
 
                 except Exception as error:
                     st.error(f"Could not save medication: {error}")
-
+ 
             else:
                 st.warning(
                     "Please enter the medication name and dosage."
@@ -314,12 +325,16 @@ elif page == "Medication Manager":
                         "✅ Mark as Taken",
                         key=f"taken_{medication['id']}"
                     ):
+                        
                         try:
-                            update_medication_status(
-                                medication["id"], "Taken"
-                            )
-                            st.session_state.medications = load_medications()
+                            if DEMO_MODE:
+                                medication["status"] = "Taken"
+                            else:
+                                update_medication_status(medication["id"], "Taken")
+                                st.session_state.medications = load_medications()
+
                             st.rerun()
+
                         except Exception as error:
                             st.error(f"Could not update medication: {error}")
 
@@ -329,11 +344,16 @@ elif page == "Medication Manager":
                         key=f"skipped_{medication['id']}"
                     ):
                         try:
-                            update_medication_status(
-                                medication["id"], "Skipped"
-                            )
-                            st.session_state.medications = load_medications()
+                            if DEMO_MODE:
+                                medication["status"] = "Skipped"
+                            else:
+                                update_medication_status(
+                                    medication["id"], "Skipped"
+                                )
+                                st.session_state.medications = load_medications()
+
                             st.rerun()
+
                         except Exception as error:
                             st.error(f"Could not update medication: {error}")
 
@@ -377,25 +397,37 @@ elif page == "Appointment Manager":
                     "location": location.strip()
                 }
 
+                
                 try:
-                    # Save the appointment to Firestore
-                    appointment_id = save_appointment(
-                        new_appointment
-                    )
+                    if DEMO_MODE:
+                        # Store only in the current demo session
+                        st.session_state.appointments.append(
+                            new_appointment
+                        )
 
-                    # Update the current dashboard data
-                    st.session_state.appointments = (
-                        load_appointments()
-                    )
+                        st.success(
+                            "Demo appointment added successfully!"
+                        )
 
-                    st.success(
-                        "Appointment saved permanently!"
-                    )
+                    else:
+                        # Save permanently in Firestore
+                        appointment_id = save_appointment(
+                            new_appointment
+                        )
+
+                        st.session_state.appointments = (
+                            load_appointments()
+                        )
+
+                        st.success(
+                            "Appointment saved permanently!"
+                        )
 
                 except Exception as error:
                     st.error(
                         f"Could not save appointment: {error}"
                     )
+
 
             else:
                 st.warning(
