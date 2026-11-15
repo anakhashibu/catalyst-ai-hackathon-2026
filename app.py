@@ -11,6 +11,9 @@ st.set_page_config(
 if "medications" not in st.session_state:
     st.session_state.medications = []
 
+if "appointments" not in st.session_state:
+    st.session_state.appointments = []
+
 # Shared medication data for all dashboards
 medications = st.session_state.medications
 
@@ -45,8 +48,9 @@ with st.sidebar:
             "Elderly Dashboard",
             "Family Dashboard",
             "Caregiver Dashboard",
-            "Medication Manager"
-        ]
+            "Medication Manager",
+            "Appointment Manager",
+        ],
     )
 
     st.divider()
@@ -257,4 +261,50 @@ elif page == "Medication Manager":
         "instructions from a qualified healthcare professional."
     )
 
-st.caption("CARELOOP AI | Hackathon Prototype | Demo data only")
+    st.caption("CARELOOP AI | Hackathon Prototype | Demo data only")
+
+# Appointment Manager
+elif page == "Appointment Manager":
+    st.title("📅 Appointment Manager")
+    st.write("Manage upcoming medical appointments.")
+
+    st.header("➕ Add Appointment")
+
+    with st.form("appointment_form", clear_on_submit=True):
+        doctor_name = st.text_input("Doctor's Name")
+        appointment_date = st.date_input("Appointment Date")
+        appointment_time = st.time_input("Appointment Time")
+        location = st.text_input("Hospital / Clinic")
+
+        submitted = st.form_submit_button("Add Appointment")
+
+        if submitted:
+            if doctor_name.strip() and location.strip():
+                st.session_state.appointments.append(
+                    {
+                        "doctor": doctor_name.strip(),
+                        "date": appointment_date,
+                        "time": appointment_time,
+                        "location": location.strip(),
+                    }
+                )
+                st.success("Appointment added successfully!")
+            else:
+                st.warning(
+                    "Please enter the doctor's name and hospital."
+                )
+
+    st.divider()
+    st.header("📋 Scheduled Appointments")
+
+    if not st.session_state.appointments:
+        st.info("No appointments scheduled yet.")
+    else:
+        for appointment in st.session_state.appointments:
+            with st.container(border=True):
+                st.subheader(appointment["doctor"])
+                st.write(f"Date: {appointment['date']}")
+                st.write(
+                    f"Time: {appointment['time'].strftime('%I:%M %p')}"
+                )
+                st.write(f"Location: {appointment['location']}")
